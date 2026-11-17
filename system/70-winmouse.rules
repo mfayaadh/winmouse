@@ -1,0 +1,5 @@
+# winmouse: let the logged-in seat user create the virtual pointer and grab
+# mice. "uaccess" grants an ACL only to the active local session, which keeps
+# keyboards out of reach (no "input" group membership needed).
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_MOUSE}=="1", TAG+="uaccess"

@@ -1,0 +1,97 @@
+#!/bin/bash
+# Switch between Linux (Hyprland/libinput) and Windows 11 mouse sensitivity.
+set -euo pipefail
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/winmouse/config"
+SERVICE=winmouse.service
+
+usage() {
+  cat <<USAGE
+Usage: winmouse-ctl <command>
+  status                 Show the active mode and Windows settings
+  mode linux|windows     Linux = Hyprland default, Windows = Windows 11 ballistics
+  toggle                 Flip between the two modes
+  speed 1-20             Windows pointer speed (MouseSensitivity, 10 = default)
+  epp on|off|toggle      Windows "Enhance pointer precision"
+  is-mode linux|windows  Exit 0 when that mode is active (for menus)
+  is-speed N             Exit 0 when the pointer speed is N
+  is-epp                 Exit 0 when Enhance pointer precision is on
+USAGE
+}
+
+get() { sed -n "s/^$1=//p" "$CONFIG" | tail -n1; }
+
+set_key() {
+  if grep -q "^$1=" "$CONFIG"; then
+    sed -i "s/^$1=.*/$1=$2/" "$CONFIG"
+  else
+    echo "$1=$2" >>"$CONFIG"
+  fi
+  systemctl --user reload "$SERVICE" 2>/dev/null || true
+}
+
+active() { systemctl --user is-active --quiet "$SERVICE"; }
+
+notify() { notify-send -a "Mouse" -i input-mouse "$1" "${2:-}" 2>/dev/null || true; }
+
+describe() {
+  local epp=off
+  [[ $(get enhance_pointer_precision) == 1 ]] && epp=on
+  echo "speed $(get sensitivity)/20, enhance pointer precision $epp"
+}
+
+set_mode() {
+  case "$1" in
+    windows)
+      systemctl --user enable --now "$SERVICE" >/dev/null 2>&1
+      sleep 0.5
+      if active; then
+        notify "Mouse: Windows 11" "$(describe)"
+      else
+        notify "Mouse: Windows mode failed" "journalctl --user -u $SERVICE"
+        exit 1
+      fi
+      ;;
+    linux)
+      systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
+      notify "Mouse: Linux default" "Hyprland input.lua settings"
+      ;;
+    *) usage; exit 1 ;;
+  esac
+}
+
+[[ -f $CONFIG ]] || { echo "Missing $CONFIG (run install.sh)" >&2; exit 1; }
+
+case "${1:-status}" in
+  status)
+    if active; then echo "mode: windows ($(describe))"; else echo "mode: linux"; fi
+    ;;
+  mode) set_mode "${2:-}" ;;
+  toggle) if active; then set_mode linux; else set_mode windows; fi ;;
+  speed)
+    [[ ${2:-} =~ ^([1-9]|1[0-9]|20)$ ]] || { usage; exit 1; }
+    set_key sensitivity "$2"
+    notify "Windows pointer speed: $2/20" "$(active && echo applied || echo 'used when Windows mode is on')"
+    ;;
+  epp)
+    case "${2:-}" in
+      on) value=1 ;;
+      off) value=0 ;;
+      toggle) [[ $(get enhance_pointer_precision) == 1 ]] && value=0 || value=1 ;;
+      *) usage; exit 1 ;;
+    esac
+    set_key enhance_pointer_precision "$value"
+    notify "Enhance pointer precision: $([[ $value == 1 ]] && echo on || echo off)"
+    ;;
+  is-mode)
+    case "${2:-}" in
+      windows) active ;;
+      linux) ! active ;;
+      *) exit 2 ;;
+    esac
+    ;;
+  is-speed) [[ $(get sensitivity) == "${2:-}" ]] ;;
+  is-epp) [[ $(get enhance_pointer_precision) == 1 ]] ;;
+  -h|--help|help) usage ;;
+  *) usage; exit 1 ;;
+esac

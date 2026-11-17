@@ -1,0 +1,13 @@
+[Unit]
+Description=Windows 11 pointer ballistics for mice (winmouse)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/winmouse
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=graphical-session.target
