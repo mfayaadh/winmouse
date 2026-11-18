@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and verify
+        run: |
+          mkdir -p build
+          gcc -O2 -Wall -Wextra -Werror -o build/winmouse src/winmouse.c
+          bash -n install.sh uninstall.sh bin/winmouse-ctl verify/test_simulate.sh
+          python3 -m py_compile verify/verify_against_windows.py
+          chmod +x verify/test_simulate.sh
+          ./verify/test_simulate.sh ./build/winmouse
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build release tarball
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p build release
+          gcc -O2 -Wall -Wextra -Werror -o build/winmouse src/winmouse.c
+
+          stage="winmouse-${TAG}-linux-x86_64"
+          mkdir -p "$stage/build" "$stage/bin" "$stage/system" "$stage/docs"
+          cp build/winmouse "$stage/build/"
+          cp bin/winmouse-ctl "$stage/bin/"
+          cp system/* "$stage/system/"
+          cp docs/REVERSE-ENGINEERING.md "$stage/docs/"
+          cp install.sh uninstall.sh README.md README.id.md LICENSE "$stage/"
+
+          tar -czf "release/${stage}.tar.gz" "$stage"
+          rm -rf "$stage"
+          (cd release && sha256sum * > checksums.txt)
+          ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/winmouse-*.tar.gz
+            release/checksums.txt

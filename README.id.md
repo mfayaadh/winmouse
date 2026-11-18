@@ -1,5 +1,8 @@
 # winmouse
 
+[![CI](https://github.com/mfayaadh/winmouse/actions/workflows/ci.yml/badge.svg)](https://github.com/mfayaadh/winmouse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 [English](README.md)
 
 Akselerasi dan sensitivitas pointer Windows 11 yang presisi untuk Linux / Omarchy (Hyprland) — hasil *reverse engineering* dari `win32kbase.sys` dan terverifikasi bit-per-bit pada **600.000 paket** langsung terhadap kode mesin Microsoft (lihat [docs/REVERSE-ENGINEERING.md](docs/REVERSE-ENGINEERING.md)).

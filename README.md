@@ -1,5 +1,8 @@
 # winmouse
 
+[![CI](https://github.com/mfayaadh/winmouse/actions/workflows/ci.yml/badge.svg)](https://github.com/mfayaadh/winmouse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 [Bahasa Indonesia](README.id.md)
 
 Exact Windows 11 pointer ballistics for Linux / Omarchy (Hyprland) — reverse engineered from `win32kbase.sys` and verified bit-for-bit across **600,000 packets** against Microsoft's own machine code (see [docs/REVERSE-ENGINEERING.md](docs/REVERSE-ENGINEERING.md)).

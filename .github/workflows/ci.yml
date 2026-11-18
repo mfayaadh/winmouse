@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build strict C binary
+        run: |
+          mkdir -p build
+          gcc -O2 -Wall -Wextra -Werror -o build/winmouse src/winmouse.c
+
+      - name: Check shell and Python script syntax
+        run: |
+          bash -n install.sh uninstall.sh bin/winmouse-ctl verify/test_simulate.sh
+          python3 -m py_compile verify/verify_against_windows.py
+
+      - name: Run deterministic --simulate regression tests
+        run: |
+          chmod +x verify/test_simulate.sh
+          ./verify/test_simulate.sh ./build/winmouse
+
+      - name: Smoke test CLI help
+        run: |
+          tmp_cfg="$(mktemp -d)"
+          mkdir -p "$tmp_cfg/winmouse"
+          : > "$tmp_cfg/winmouse/config"
+          XDG_CONFIG_HOME="$tmp_cfg" ./bin/winmouse-ctl --help >/dev/null
+          rm -rf "$tmp_cfg"
